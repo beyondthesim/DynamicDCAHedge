@@ -1,0 +1,84 @@
+# === Secrets ===
+.env
+.env.secret
+.env.local
+*.key
+*.pem
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# === Virtual envs ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Linters / Type checkers ===
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+.cache/
+
+# === IDEs ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# === Project-specific ===
+# 대용량 OHLCV 캐시
+data/
+data/cache/
+data/raw/
+
+# 실행 상태 (재생성됨)
+runtime/
+*.pid
+live.log
+
+# 로그
+*.log
+logs/
+
+# 백테스트 산출물 (개별)
+reports/
+notebooks/.ipynb_checkpoints/
+
+# 임시 파일
+*.tmp
+*.bak
+
+# Optuna DB
+*.db
+*.sqlite
+*.sqlite3
+
+# === Claude / 에이전트 ===
+.claude/

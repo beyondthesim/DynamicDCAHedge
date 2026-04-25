@@ -1,0 +1,55 @@
+data:
+  symbol: "TURBO/USDT:USDT"
+  timeframe: "1m"
+  lookback_days: 730
+
+backtest:
+  init_cash: 10000.0
+  fee_rate: 0.0005     # OKX taker 0.05%
+  slippage: 0.0001     # 1 bps
+
+strategy:
+  # Entry indicators
+  rsi_period: 14
+  rsi_thresh: 19.0      # Optuna v3: trial #158, score=2.320
+  bb_period: 20
+  bb_std: 2.75          # Optuna v3
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  vol_window: 20
+  vol_thresh: 1.0       # Optuna v3
+
+  # DCA: cumulative drop % from FIRST entry price
+  # [level2, level3, level4, level5, level6, level7]
+  dca_drops: [0.018, 0.020, 0.080, 0.135, 0.140, 0.250]
+
+  # Size multiplier per DCA level (1~7): martingale-ish
+  size_mults: [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+
+  # Hedge: open short at this DCA level (1-indexed)
+  hedge_entry: 4
+  hedge_ratio: 0.3      # Optuna v3: 30% hedge
+
+  # Partial TP: close tp1_size at tp1_pct, remainder moves to break-even SL
+  tp1_pct: 0.015        # Optuna v3: 1.5% first take-profit
+  tp1_size: 0.5         # 50% position closed at tp1
+
+  # Exit — PRICE BASED relative to avg_long_price
+  tp_pct: 0.050         # Optuna v3: 5.0% above avg long
+  sl_pct: 0.23          # Optuna v3: 23% below avg long
+  sl_active: true
+
+  # BTC macro filter: block new long entries when BTC 4h < EMA200 and EMA200 falling
+  btc_filter: true
+
+  # Position sizing
+  base_margin_pct: 0.015   # Optuna v3: 1.5% per base entry × 10x = 15% notional
+  leverage: 10.0
+
+regime:
+  adx_period: 14
+  adx_strong_thresh: 30.0
+  ema_period: 200
+  atr_period: 14
+  atr_lookback: 100

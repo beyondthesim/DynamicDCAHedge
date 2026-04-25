@@ -1,0 +1,44 @@
+{
+  "version": "2.1",
+  "description": "Dynamic coin rotation: dual-direction reversal + 30pct hedge. 백테스트와 1:1 동일 동작 (다층 가드 없음).",
+
+  "total_seed_usd": 100.0,
+
+  "top_k_coins": 8,
+  "refresh_hours": 12,
+
+  "new_listing_min_days": 7,
+  "new_listing_max_days": 180,
+  "top_gainer_top_k": 40,
+  "min_volume_usd": 500000,
+  "pre_filter_top_n": 50,
+  "min_trades": 8,
+  "max_mdd_pct": 60.0,
+  "filter_backtest_days": 45,
+  "dual_direction": true,
+
+  "catastrophic_loss_pct": 95.0,
+
+  "state_dir": "runtime",
+
+  "strategy_params": {
+    "red_candle_n": 1,
+    "ema_entry_period": 25,
+    "dca_next_drop": 0.005,
+    "all_close_pct": 0.025,
+    "safe_close_n": 2,
+    "safe_close_pct": 0.018,
+    "loss_close_n": 7,
+    "loss_close_pct": 0.006,
+    "base_margin_pct": 0.008,
+    "sl_pct": 0.15,
+    "hedge_ratio": 0.3,
+    "hedge_entry": 3,
+    "leverage": 20.0,
+    "tp1_pct": 0.012,
+    "tp1_size": 0.4,
+    "size_mults": [
+      1, 1, 1, 1, 2, 3, 5, 8, 13, 21
+    ]
+  }
+}
