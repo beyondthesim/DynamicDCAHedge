@@ -40,6 +40,7 @@ class CoinExecutor:
         init_cash: float,
         state_dir: Path,
         direction: str = "short",
+        effective_leverage: float | None = None,
     ):
         if direction not in ("short", "long"):
             raise ValueError(f"direction must be 'short' or 'long', got {direction!r}")
@@ -49,6 +50,9 @@ class CoinExecutor:
         self.p = params
         self.direction = direction
         self.feed = DataFeed(trader, symbol)
+        # OKX 실제 레버리지 (target보다 작을 수 있음). base_margin 자동 보정으로 노셔널 동일 유지.
+        self.effective_leverage = float(effective_leverage or params.leverage)
+        self.base_margin_boost = float(params.leverage) / self.effective_leverage
         self.state_path = state_dir / f"state_{self.coin}.json"
         self.state = load_state(self.state_path, StrategyState(
             name=f"{direction}_div_{self.coin}",
@@ -56,6 +60,11 @@ class CoinExecutor:
             init_cash=init_cash,
             capital=init_cash,
         ))
+        if self.base_margin_boost > 1.0:
+            logger.warning(
+                "[%s] effective_lev=%.0fx (target=%.0fx) → base_margin × %.2f 보정",
+                self.coin, self.effective_leverage, params.leverage, self.base_margin_boost,
+            )
         # RiskManager가 읽어가는 라이브 메트릭
         self.last_atr_pct: float = 0.0
         self.last_unrealized_pnl_pct: float = 0.0
@@ -137,8 +146,13 @@ class CoinExecutor:
             block_new = bool(risk_state.block_new_entry()) if hasattr(risk_state, "block_new_entry") else False
             block_dca = bool(risk_state.block_dca()) if hasattr(risk_state, "block_dca") else False
 
+        # base_margin × boost × effective_lev = base_margin × (target/actual) × actual = base_margin × target
+        # 따라서 노셔널은 OKX 실제 레버리지와 무관하게 일정 (target=20× 기준).
         notional_base = (
-            s.init_cash * float(p.base_margin_pct) * float(p.leverage) * size_mult_global
+            s.init_cash
+            * float(p.base_margin_pct) * self.base_margin_boost
+            * self.effective_leverage
+            * size_mult_global
         )
         size_mults = list(p.size_mults)
         max_dca = len(size_mults) - 1

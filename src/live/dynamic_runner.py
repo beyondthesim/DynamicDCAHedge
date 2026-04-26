@@ -121,6 +121,31 @@ class DynamicRunner:
             sl_pct=float(sp["sl_pct"]),
         )
 
+    # ── OKX 활성 포지션 레버리지 일괄 정규화 ─────────────
+    def _normalize_existing_leverages(self, target_lev: int) -> None:
+        """OKX에 이미 열려있는 모든 포지션을 target 레버리지로 강제.
+
+        OKX max < target이면 max로 fallback (base_margin 보정은 CoinExecutor가 처리).
+        """
+        if self.trader.dry_run:
+            logger.info("[DRY] _normalize_existing_leverages skipped")
+            return
+        try:
+            positions = self.trader.fetch_all_positions()
+        except Exception as e:
+            logger.error("기존 포지션 조회 실패: %s", e)
+            return
+        if not positions:
+            logger.info("기존 활성 포지션 없음 — 정규화 스킵")
+            return
+        logger.info("=== 기존 활성 포지션 %d개 레버리지 %dx 강제 ===", len(positions), target_lev)
+        for p in positions:
+            actual = self.trader.set_leverage_safe(p.symbol, target=target_lev)
+            logger.info(
+                "  %s: %.0fx → %dx (notional=$%.0f, side=%s)",
+                p.symbol, p.leverage, actual, p.notional, p.side,
+            )
+
     # ── 코인 풀 갱신 ─────────────────────────────────────
     def _refresh_universe(self) -> None:
         logger.info("=== 유니버스 갱신 시작 ===")
@@ -160,17 +185,21 @@ class DynamicRunner:
             logger.info("코인 제외: %s (%s)", sym, direction)
 
         per_coin_cash = self.total_seed / max(len(new_keys), 1)
+        target_lev = int(self.config["strategy_params"]["leverage"])
         for c in ranked:
             direction = getattr(c, "best_direction", "short")
             params = params_short if direction == "short" else params_long
             if c.symbol not in self.executors:
+                # 20× 강제 — OKX max < 20이면 fallback + base_margin 자동 보정
+                actual_lev = self.trader.set_leverage_safe(c.symbol, target=target_lev)
                 logger.info(
-                    "코인 추가: %s [%s] cash=$%.2f", c.symbol, direction, per_coin_cash,
+                    "코인 추가: %s [%s] cash=$%.2f lev=%dx",
+                    c.symbol, direction, per_coin_cash, actual_lev,
                 )
-                self.trader.set_leverage(c.symbol, params.leverage)
                 self.executors[c.symbol] = CoinExecutor(
                     c.symbol, self.trader, params, per_coin_cash, self.state_dir,
                     direction=direction,
+                    effective_leverage=actual_lev,
                 )
 
         for ex in self.executors.values():
@@ -215,6 +244,8 @@ class DynamicRunner:
             "DynamicRunner 시작. dry_run=%s sandbox=%s seed=$%.0f top_k=%d dual=%s",
             self.dry_run, self.sandbox, self.total_seed, self.top_k, self.dual_direction,
         )
+        target_lev = int(self.config["strategy_params"]["leverage"])
+        self._normalize_existing_leverages(target_lev)
         self._refresh_universe()
 
         DataFeed.wait_for_next_bar(buffer_sec=5)

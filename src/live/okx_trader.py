@@ -143,6 +143,58 @@ class OKXTrader:
         except Exception as e:
             logger.warning("set_leverage 실패: %s", e)
 
+    def get_max_leverage(self, symbol: str) -> int:
+        """심볼의 OKX 최대 레버리지. 실패 시 기본 20."""
+        try:
+            market = self._ex.market(symbol)
+            max_lev = (market.get("limits", {}).get("leverage", {}) or {}).get("max")
+            return int(max_lev) if max_lev else 20
+        except Exception:
+            return 20
+
+    def set_leverage_safe(
+        self, symbol: str, target: int = 20, margin_mode: str = "cross"
+    ) -> int:
+        """타겟 레버리지로 강제. OKX max를 초과하면 max로 fallback.
+
+        Returns:
+            실제 적용된 레버리지 (target 또는 OKX max).
+        """
+        max_lev = self.get_max_leverage(symbol)
+        actual = min(int(target), max_lev)
+        self.set_leverage(symbol, actual, margin_mode)
+        if actual < target:
+            logger.warning(
+                "%s: OKX max %dx (요청 %dx) — base_margin × %.2f 자동 보정 필요",
+                symbol, actual, target, target / actual,
+            )
+        return actual
+
+    def fetch_all_positions(self) -> list[Position]:
+        """contracts > 0 인 모든 active 포지션."""
+        if self.dry_run:
+            return []
+        try:
+            raw = self._retry(self._ex.fetch_positions)
+        except Exception as e:
+            logger.warning("fetch_all_positions 실패: %s", e)
+            return []
+        out: list[Position] = []
+        for p in raw:
+            if float(p.get("contracts") or 0) <= 0:
+                continue
+            side = "long" if p.get("side") == "long" else "short"
+            out.append(Position(
+                symbol=p["symbol"], side=side,
+                contracts=float(p["contracts"]),
+                notional=float(p.get("notional") or 0),
+                avg_price=float(p.get("entryPrice") or 0),
+                unrealized_pnl=float(p.get("unrealizedPnl") or 0),
+                leverage=float(p.get("leverage") or 0),
+                raw=p,
+            ))
+        return out
+
     # ── 주문 ──────────────────────────────────────────────
     def market_order(
         self,
