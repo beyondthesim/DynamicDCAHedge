@@ -49,11 +49,14 @@ class UniverseScanner:
         top_gainer_top_k: int = 20,
         min_volume_usd: float = 1_000_000,
         ex: Optional[ccxt.Exchange] = None,
+        excluded_bases: Optional[set[str]] = None,
     ):
         self.new_listing_max_days = new_listing_max_days
         self.new_listing_min_days = new_listing_min_days
         self.top_gainer_top_k = top_gainer_top_k
         self.min_volume_usd = min_volume_usd
+        # 다른 전략 점유 + 고정 종목 — 스캔 결과에서 제외할 base 코인 셋
+        self.excluded_bases = {b.upper() for b in (excluded_bases or set())}
         self.ex = ex or ccxt.okx({
             "options": {"defaultType": "swap"},
             "enableRateLimit": True,
@@ -94,10 +97,13 @@ class UniverseScanner:
         )
 
     def scan(self) -> list[CoinCandidate]:
-        """전체 유니버스 스캔. 신규 + 탑게이너 통합."""
+        """전체 유니버스 스캔. 신규 + 탑게이너 통합. 제외 base 코인은 누락."""
         swaps = self._all_swaps()
+        if self.excluded_bases:
+            swaps = [m for m in swaps if (m.get("base") or "").upper() not in self.excluded_bases]
         symbols = [m["symbol"] for m in swaps]
-        logger.info("Total active USDT swaps: %d", len(swaps))
+        logger.info("Total active USDT swaps: %d (excluded %d bases)",
+                    len(swaps), len(self.excluded_bases))
 
         tickers = self.ex.fetch_tickers(symbols)
 

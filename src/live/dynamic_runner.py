@@ -29,6 +29,15 @@ from .data_feed import DataFeed
 from .okx_trader import OKXTrader
 from .risk_manager import RiskLimits, RiskManager
 
+# 다중 전략 코인 충돌 방지 (고정 종목 + HFT 등 다른 전략 active 코인 제외)
+import sys as _sys
+_sys.path.insert(0, "C:/trade")
+try:
+    from shared.strategy_coordinator import StrategyCoordinator
+    _COORD_AVAILABLE = True
+except Exception:
+    _COORD_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,11 +62,20 @@ class DynamicRunner:
         self.dual_direction = bool(self.config.get("dual_direction", True))
 
         self.trader = OKXTrader(dry_run=dry_run, sandbox=sandbox)
+
+        # 전략 간 코인 충돌 방지 coordinator
+        self.coord = StrategyCoordinator("dynamic_dca_hedge") if _COORD_AVAILABLE else None
+        if self.coord:
+            logger.info("StrategyCoordinator 활성화 — 고정/타전략 점유 코인 제외")
+        else:
+            logger.warning("StrategyCoordinator 로드 실패 — 충돌 검사 비활성")
+
         self.scanner = UniverseScanner(
             new_listing_max_days=int(self.config.get("new_listing_max_days", 180)),
             new_listing_min_days=int(self.config.get("new_listing_min_days", 7)),
             top_gainer_top_k=int(self.config.get("top_gainer_top_k", 40)),
             min_volume_usd=float(self.config.get("min_volume_usd", 500_000)),
+            excluded_bases=(self.coord.excluded_bases() if self.coord else None),
         )
         self.quality = QualityFilter(
             min_trades=int(self.config.get("min_trades", 8)),
@@ -152,6 +170,13 @@ class DynamicRunner:
         params_short = self._build_params("short")
         params_long = self._build_params("long")
 
+        # coordinator로 매번 최신 제외 셋 갱신 (HFT가 새로 잡은 코인도 반영)
+        if self.coord is not None:
+            self.scanner.excluded_bases = {
+                b.upper() for b in self.coord.excluded_bases()
+            }
+            logger.info("제외 base: %s", sorted(self.scanner.excluded_bases))
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             df_btc = fetch_historical("BTC/USDT:USDT", "4h", 200)
@@ -182,6 +207,8 @@ class DynamicRunner:
         for sym, direction in (old_keys - new_keys):
             ex = self.executors.pop(sym)
             ex.force_close()
+            if self.coord is not None:
+                self.coord.unlock(sym)
             logger.info("코인 제외: %s (%s)", sym, direction)
 
         per_coin_cash = self.total_seed / max(len(new_keys), 1)
@@ -190,6 +217,10 @@ class DynamicRunner:
             direction = getattr(c, "best_direction", "short")
             params = params_short if direction == "short" else params_long
             if c.symbol not in self.executors:
+                # 충돌 검사: 다른 전략·고정 종목이 점유 중이면 skip
+                if self.coord is not None and not self.coord.try_lock(c.symbol):
+                    logger.info("코인 skip (충돌): %s", c.symbol)
+                    continue
                 # 20× 강제 — OKX max < 20이면 fallback + base_margin 자동 보정
                 actual_lev = self.trader.set_leverage_safe(c.symbol, target=target_lev)
                 logger.info(
@@ -201,6 +232,10 @@ class DynamicRunner:
                     direction=direction,
                     effective_leverage=actual_lev,
                 )
+
+        # 자기 active 동기화 (stale 정리)
+        if self.coord is not None:
+            self.coord.sync_active(list(self.executors.keys()))
 
         for ex in self.executors.values():
             ex.state.init_cash = per_coin_cash
@@ -276,5 +311,9 @@ class DynamicRunner:
             DataFeed.wait_for_next_bar(buffer_sec=5)
 
         logger.warning("러너 종료 — 모든 포지션 청산 시도")
-        for ex in self.executors.values():
+        for sym, ex in self.executors.items():
             ex.force_close()
+            if self.coord is not None:
+                self.coord.unlock(sym)
+        if self.coord is not None:
+            self.coord.sync_active([])
