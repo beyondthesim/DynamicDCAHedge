@@ -1,0 +1,13 @@
+coin,adx,trend7d,regime,swap_mode,v2_dir,v2_ret,v2_mdd,v2_trades,swap_ret,swap_mdd,swap_trades,hybrid_ret,hybrid_mdd,hybrid_trades,hybrid_strategy
+BONK,22.7,-5.76,TREND,trend_short,long,-6.1,-108.85,29,-2.12,-3.78,94,-2.12,-3.78,94,trend_short
+DOGE,22.96,-1.69,MEAN_REV,short_divergence,long,-3.09,-14.96,19,-6.46,-12.52,31,-3.09,-14.96,19,div(long)
+FARTCOIN,23.58,2.41,MEAN_REV,divergence,short,2.54,-17.06,58,-52.49,-106.81,44,2.54,-17.06,58,div(short)
+FLOKI,23.92,-4.41,MEAN_REV,short_divergence,short,-0.03,-15.54,41,-0.03,-15.54,41,-0.03,-15.54,41,div(short)
+MEME,21.67,1.87,MEAN_REV,divergence,short,3.53,-12.94,41,-16.35,-29.26,19,3.53,-12.94,41,div(short)
+ONDO,22.32,-3.68,MEAN_REV,short_divergence,short,8.61,-10.74,40,8.61,-10.74,40,8.61,-10.74,40,div(short)
+ORDI,20.43,-5.55,TREND,trend_short,long,-38.31,-111.58,23,-6.64,-6.87,92,-6.64,-6.87,92,trend_short
+PEPE,22.11,-2.65,MEAN_REV,short_divergence,short,5.17,-11.01,37,5.17,-11.01,37,5.17,-11.01,37,div(short)
+SHIB,22.87,-2.31,MEAN_REV,short_divergence,long,1.73,-28.5,14,-5.3,-8.4,25,1.73,-28.5,14,div(long)
+SUI,22.64,-1.74,MEAN_REV,short_divergence,short,-0.81,-8.6,45,-0.81,-8.6,45,-0.81,-8.6,45,div(short)
+TURBO,22.02,-0.4,MEAN_REV,short_divergence,long,-1.02,-16.07,24,-13.39,-19.11,40,-1.02,-16.07,24,div(long)
+WIF,22.57,-6.97,TREND,trend_short,short,6.39,-11.21,40,-3.14,-5.39,95,-3.14,-5.39,95,trend_short

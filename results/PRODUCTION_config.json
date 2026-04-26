@@ -1,6 +1,6 @@
 {
-  "version": "2.1",
-  "description": "Dynamic coin rotation: dual-direction reversal + 30pct hedge. 백테스트와 1:1 동일 동작 (다층 가드 없음).",
+  "version": "2.2",
+  "description": "Dynamic coin rotation: dual-direction reversal + 30pct hedge. 신규 상장 7~60일 코인만 운영 (안정성 우선).",
 
   "total_seed_usd": 100.0,
 
@@ -8,7 +8,7 @@
   "refresh_hours": 12,
 
   "new_listing_min_days": 7,
-  "new_listing_max_days": 180,
+  "new_listing_max_days": 60,
   "top_gainer_top_k": 40,
   "min_volume_usd": 500000,
   "pre_filter_top_n": 50,
