@@ -16,6 +16,7 @@ from pathlib import Path
 from .data_feed import DataFeed
 from .okx_trader import OKXTrader
 from .state import StrategyState, load_state, save_state
+from .trade_logger import log_event as log_trade
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,18 @@ class CoinExecutor:
                 s.open_time = datetime.now(timezone.utc).isoformat()
                 s.capital -= order.fee
                 s.trade_count += 1
+                try:
+                    bal = self.trader.fetch_balance()
+                    eq_now = float(bal.get("USDT", {}).get("total") or 0)
+                except Exception:
+                    eq_now = None
+                log_trade(
+                    strategy=s.name, symbol=self.symbol, action="entry",
+                    direction=self.direction,
+                    price=order.price, qty=order.amount, notional=order.cost,
+                    fee=order.fee, dca_level=1,
+                    entry_seed=s.init_cash, entry_total_equity=eq_now,
+                )
                 self._save()
             return
 
@@ -245,6 +258,13 @@ class CoinExecutor:
                     s.dca_level = new_level
                     s.last_entry_price = price
                     s.capital -= order.fee
+                    log_trade(
+                        strategy=s.name, symbol=self.symbol, action="dca",
+                        direction=self.direction,
+                        price=order.price, qty=order.amount, notional=order.cost,
+                        fee=order.fee, dca_level=new_level,
+                        entry_seed=s.init_cash,
+                    )
 
                     # 헷지 진입/증액 (effective hedge_ratio 사용)
                     if s.dca_level >= int(p.hedge_entry) and hedge_ratio_eff > 0:
@@ -268,6 +288,13 @@ class CoinExecutor:
                             s.hedge_qty = new_h_qty
                             s.hedge_notional += h.cost
                             s.capital -= h.fee
+                            log_trade(
+                                strategy=s.name, symbol=self.symbol, action="hedge",
+                                direction=self.hedge_position_side,
+                                price=h.price, qty=h.amount, notional=h.cost,
+                                fee=h.fee, dca_level=s.dca_level,
+                                entry_seed=s.init_cash,
+                            )
                     self._save()
 
         # ── 청산 조건 ───────────────────────────────────────────────
@@ -315,6 +342,24 @@ class CoinExecutor:
             realized = primary_pnl + hedge_pnl - fee
             s.capital += realized
             s.realized_pnl += realized
+            if realized > 0:
+                s.wins += 1
+            else:
+                s.losses += 1
+            pnl_pct = (realized / s.init_cash * 100) if s.init_cash > 0 else None
+            try:
+                bal = self.trader.fetch_balance()
+                eq_now = float(bal.get("USDT", {}).get("total") or 0)
+            except Exception:
+                eq_now = None
+            log_trade(
+                strategy=s.name, symbol=self.symbol, action="close",
+                direction=self.direction,
+                price=price, qty=s.primary_qty,
+                notional=s.primary_notional + s.hedge_notional,
+                pnl=realized, fee=fee, reason=reason, dca_level=s.dca_level,
+                entry_seed=s.init_cash, entry_total_equity=eq_now, pnl_pct=pnl_pct,
+            )
 
             s.primary_side = "flat"
             s.primary_notional = s.primary_qty = s.primary_avg_price = 0

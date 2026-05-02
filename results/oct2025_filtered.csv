@@ -1,0 +1,13 @@
+coin,vr,trend7d,pass_A,pass_B,pass_C,calmar_dir,calmar_ret,calmar_mdd,override_dir,override_ret,override_mdd,trades
+BONK,0.875,-5.76,Y,Y,Y,long,-6.1,-108.85,short,-17.41,-21.29,29
+DOGE,0.828,-1.69,Y,Y,Y,long,-3.09,-14.96,short,-6.46,-12.52,19
+FARTCOIN,1.023,2.41,n,Y,n,short,2.54,-17.06,long,-52.49,-106.81,58
+FLOKI,0.938,-4.41,Y,Y,Y,short,-0.03,-15.54,short,-0.03,-15.54,41
+MEME,0.801,1.87,Y,Y,Y,short,3.53,-12.94,long,-16.35,-29.26,41
+ONDO,0.875,-3.68,Y,Y,Y,short,8.61,-10.74,short,8.61,-10.74,40
+ORDI,0.8,-5.55,Y,Y,Y,long,-38.31,-111.58,short,-16.86,-24.17,23
+PEPE,0.786,-2.65,Y,Y,Y,short,5.17,-11.01,short,5.17,-11.01,37
+SHIB,0.859,-2.31,Y,Y,Y,long,1.73,-28.5,short,-5.3,-8.4,14
+SUI,0.969,-1.74,n,Y,n,short,-0.81,-8.6,short,-0.81,-8.6,45
+TURBO,0.809,-0.4,Y,Y,Y,long,-1.02,-16.07,long,-1.02,-16.07,24
+WIF,0.855,-6.97,Y,Y,Y,short,6.39,-11.21,short,6.39,-11.21,40

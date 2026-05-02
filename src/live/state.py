@@ -38,6 +38,9 @@ class StrategyState:
     # 거래 카운트
     trade_count: int = 0
     realized_pnl: float = 0.0
+    # 승패 통계 (청산 시 갱신, 누적)
+    wins: int = 0
+    losses: int = 0
 
 
 def load_state(path: str | Path, default: StrategyState) -> StrategyState:
